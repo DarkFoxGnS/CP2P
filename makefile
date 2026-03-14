@@ -2,15 +2,21 @@
 #Common variables
 CFLAGS = -Iinclude\
 	  -L./lib\
+	  -lws2_32
 
 DEPENDENCIES = $(executable)\
+
+FORCED_TARGETS = $(SRC_DIR)/cp2p.h\
+		 $(SRC_DIR)/cp2p_struct.h\
+		 $(SRC_DIR)/win_cp2p.h\
+		 $(SRC_DIR)/lin_cp2p.h
 
 #####################################################################
 #App variables
 compiler := ~/w64-gcc
-executable := a.exe
+executable := cp2p.exe
 rarExecutable := ~/rar/src/rar/rar
-shipName := dist.rar
+shipName := cp2p_dist.rar
 
 SRC_DIR := src
 OBJ_DIR := temp
@@ -22,12 +28,17 @@ INCLUDE_DIR := include
 SOURCE_FILES := $(shell find $(SRC_DIR) -name *.c)
 OBJECT_FILES := $(shell echo $(SOURCE_FILES) | sed 's/$(SRC_DIR)/$(OBJ_DIR)/g' | sed 's/\.c/\.o/g')
 
+GIT_HASH=$(shell git rev-parse HEAD)
+COMPILE_TIME=$(shell date -u +'%Y-%m-%d %H:%M:%S UTC')
+GIT_BRANCH=$(shell git branch --show-current)
+VERSION_FLAGS=-DGIT_HASH="\"$(GIT_HASH)\"" -DCOMPILE_TIME="\"$(COMPILE_TIME)\"" -DGIT_BRANCH="\"$(GIT_BRANCH)\""
+
 #####################################################################
 #Optional variables
 build: DEBUG_FLAGS = -DDEBUG
-package: BUILD_FLAGS = -mwindows
+package: BUILD_FLAGS =
 
-#####################################################################
+#############192.178.25.174:443########################################################
 #Default targets
 .PHONY: init build clean build ship help
 
@@ -60,10 +71,10 @@ init:
 #####################################################################
 #Targets to build the executable and the temporal object files.
 $(executable): $(OBJECT_FILES)
-	$(compiler) $(BUILD_FLAGS) -o $(executable) temp/*.o $(CFLAGS) 
+	$(compiler) $(BUILD_FLAGS) $(DEBUG_FLAGS) -o $(executable) temp/*.o $(CFLAGS) 
 
-$(OBJ_DIR)/%.o : $(SRC_DIR)/%.c
-	$(compiler) $(DEBUG_FLAGS) -c -o $@ $< $(CFLAGS)
+$(OBJ_DIR)/%.o : $(SRC_DIR)/%.c $(wildcard $(SRC_DIR)/%.h) $(FORCED_TARGETS)
+	$(compiler) $(VERSION_FLAGS) $(BUILD_FLAGS) $(DEBUG_FLAGS) -c -o $@ $< $(CFLAGS)
 
 #####################################################################
 #Targets to clean build.
